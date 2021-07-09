@@ -13,12 +13,19 @@ variable "secret_key" {
   default     = ""
 }
 
-// Create a variable for our domain name because we'll be using it a lot.
-variable "domain" {
-  default = "resbbi.com"
+variable "website-domain-main" {
+  description = "Main website domain, e.g. cloudmaniac.net"
+  type        = string
 }
 
-// We'll also need the root domain (also known as zone apex or naked domain).
-variable "bucket_name" {
-  default = "us-east-2.resbbi.com"
+variable "website-domain-redirect" {
+  description = "Secondary FQDN that will redirect to the main URL, e.g. www.cloudmaniac.net"
+  default     = null
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags added to resources"
+  default     = {}
+  type        = map(string)
 }
