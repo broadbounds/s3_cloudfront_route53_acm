@@ -251,7 +251,8 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
 
 # Creates the DNS record to point on the main CloudFront distribution ID
 resource "aws_route53_record" "website_cdn_root_record" {
-  zone_id = data.aws_route53_zone.main.zone_id
+  #zone_id = data.aws_route53_zone.main.zone_id
+  zone_id = "${aws_route53_zone.main.zone_id}"
   name    = var.website-domain-main
   type    = "A"
 
@@ -358,7 +359,8 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
 
 # Creates the DNS record to point on the CloudFront distribution ID that handles the redirection website
 resource "aws_route53_record" "website_cdn_redirect_record" {
-  zone_id = data.aws_route53_zone.main.zone_id
+  #zone_id = data.aws_route53_zone.main.zone_id
+  zone_id = "${aws_route53_zone.main.zone_id}"
   name    = var.website-domain-redirect
   type    = "A"
 
