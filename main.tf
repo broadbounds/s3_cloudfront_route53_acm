@@ -174,12 +174,12 @@ resource "aws_s3_bucket" "website_redirect" {
 
 // we upload our html files to s3 bucket
 resource "aws_s3_bucket_object" "file_upload1" {
-  bucket = "${var.website-domain-main}-root"
+  bucket = "${aws_s3_bucket.website_root.bucket}"
   key    = "my-www-resbbi-com-s3-bucket-key1"
   source = "index.html"
 } 
 resource "aws_s3_bucket_object" "file_upload2" {
-  bucket = "${var.website-domain-main}-redirect"
+  bucket = "${aws_s3_bucket.website_redirect.bucket}"
   key    = "my-www-resbbi-com-s3-bucket-key2"
   source = "index.html"
 }   
