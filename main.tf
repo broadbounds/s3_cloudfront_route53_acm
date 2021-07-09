@@ -77,7 +77,7 @@ resource "aws_route53_record" "wildcard_validation" {
 resource "aws_acm_certificate_validation" "wildcard_cert" {
   provider                = aws.us-east-1
   certificate_arn         = aws_acm_certificate.wildcard_website.arn
-  validation_record_fqdns = [for k, v in aws_route53_record.wildcard_validation : v.fqdn]
+  # validation_record_fqdns = [for k, v in aws_route53_record.wildcard_validation : v.fqdn] #not available coz using email validation
 }
 
 
