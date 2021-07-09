@@ -19,7 +19,7 @@ provider "aws" {
 resource  "aws_route53_zone" "main" {
   # provider = aws.us-east-1  # the alias of the provider
   name         = var.website-domain-main
-  private_zone = false
+  #private_zone = false
 }
 
 ## ACM (AWS Certificate Manager)
@@ -52,7 +52,8 @@ resource "aws_route53_record" "wildcard_validation" {
   }
   name            = each.value.name
   type            = each.value.type
-  zone_id         = data.aws_route53_zone.main.zone_id
+  #zone_id         = data.aws_route53_zone.main.zone_id
+  zone_id = "${aws_route53_zone.main.zone_id}"
   records         = [each.value.record]
   allow_overwrite = true
   ttl             = "60"
