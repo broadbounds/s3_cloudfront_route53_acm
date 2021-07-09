@@ -2,11 +2,15 @@
 
 # We set AWS as the cloud platform to use
 provider "aws" {
-   alias  = "us-east-1"
    region  = var.aws_region
    access_key = var.access_key
    secret_key = var.secret_key
  }
+
+provider "aws" {
+  alias  = "us-east-1"
+  region = "us-east-1"
+}
 
 ## Route 53
 # Provides details about the zone
