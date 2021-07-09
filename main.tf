@@ -1,3 +1,5 @@
+# Tuto at https://github.com/cloudmaniac/terraform-aws-static-website
+
 # We set AWS as the cloud platform to use
 provider "aws" {
    region  = var.aws_region
