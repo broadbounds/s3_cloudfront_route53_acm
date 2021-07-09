@@ -1,4 +1,9 @@
-
+# We set AWS as the cloud platform to use
+provider "aws" {
+   region  = var.aws_region
+   access_key = var.access_key
+   secret_key = var.secret_key
+ }
 
 resource "aws_s3_bucket" "b" {
   bucket = var.bucket_name
@@ -28,6 +33,15 @@ EOF
 locals {
   s3_origin_id = "myS3Origin"
 }
+
+
+// we upload our html files to s3 bucket
+resource "aws_s3_bucket_object" "file_upload" {
+  bucket = var.bucket_name
+  key    = "my-resbbi-com-s3-bucket-key"
+  source = "index.html"
+}
+
 
 // Certificate
 resource "aws_acm_certificate" "cert" {
