@@ -17,7 +17,7 @@ provider "aws" {
 ## Route 53
 # Provides details about the zone
 data "aws_route53_zone" "main" {
-  provider = "aws.us-east-1"  # the alias of the provider
+  provider = aws.us-east-1  # the alias of the provider
   name         = var.website-domain-main
   private_zone = false
 }
