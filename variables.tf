@@ -25,6 +25,7 @@ variable "website-domain-redirect" {
   default     = "www.resbbi.com"
 }
 
+
 variable "tags" {
   description = "Tags added to resources"
   default     = {}
