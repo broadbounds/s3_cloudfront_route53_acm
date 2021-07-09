@@ -30,7 +30,7 @@ pipeline {
     stage('TerraformPlan'){
         steps {
             script {
-                sh "terraform plan -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY' -target=aws_acm_certificate.cert -out terraform.tfplan;echo \$? > status"
+                sh "terraform plan -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY' -out terraform.tfplan;echo \$? > status"
                 stash name: "terraform-plan", includes: "terraform.tfplan"
             }
         }
