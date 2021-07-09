@@ -28,7 +28,7 @@ resource "aws_acm_certificate" "wildcard_website" {
   provider                  = aws.us-east-1
   domain_name               = var.website-domain-main
   subject_alternative_names = ["*.${var.website-domain-main}"]
-  validation_method         = "DNS"
+  validation_method         = "EMAIL"
 
   tags = merge(var.tags, {
     ManagedBy = "terraform"
