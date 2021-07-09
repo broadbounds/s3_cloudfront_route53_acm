@@ -16,12 +16,14 @@ variable "secret_key" {
 variable "website-domain-main" {
   description = "Main website domain, e.g. cloudmaniac.net"
   type        = string
+  default     = "resbbi.com"
 }
 
 variable "website-domain-redirect" {
   description = "Secondary FQDN that will redirect to the main URL, e.g. www.cloudmaniac.net"
   default     = null
   type        = string
+  default     = "www.resbbi.com"
 }
 
 variable "tags" {
