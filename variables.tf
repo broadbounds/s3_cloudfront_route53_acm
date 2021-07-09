@@ -21,7 +21,6 @@ variable "website-domain-main" {
 
 variable "website-domain-redirect" {
   description = "Secondary FQDN that will redirect to the main URL, e.g. www.cloudmaniac.net"
-  default     = null
   type        = string
   default     = "www.resbbi.com"
 }
