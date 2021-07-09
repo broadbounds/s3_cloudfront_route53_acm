@@ -14,11 +14,11 @@ variable "secret_key" {
 }
 
 // Create a variable for our domain name because we'll be using it a lot.
-variable "www_domain_name" {
-  default = "www.resbbi.com"
+variable "domain" {
+  default = "resbbi.com"
 }
 
 // We'll also need the root domain (also known as zone apex or naked domain).
-variable "root_domain_name" {
-  default = "resbbi.com"
+variable "bucket_name" {
+  default = "us-east-2.resbbi.com"
 }
