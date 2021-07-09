@@ -1,9 +1,3 @@
-output "testing" {
-  value = "Test this demo code by going to https://${aws_route53_record.www.fqdn} and checking your have a valid SSL cert"
-}
-output "testing_sclient" {
-  value = "Test this SSL by using openssl s_client -host ${aws_route53_record.www.fqdn} -port 443 and looking at the certs"
-}
 
 output "s3_bucket_details" {
   value       = aws_s3_bucket.b
@@ -15,7 +9,3 @@ output "aws_cloudfront_details" {
   description = "The details of the cloudfront"
 }
 
-output "aws_route53_details" {
-  value       = aws_route53_zone.zone
-  description = "The details of the route53"
-}
