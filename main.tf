@@ -42,22 +42,36 @@ resource "aws_acm_certificate" "wildcard_website" {
 }
 
 # Validates the ACM wildcard by creating a Route53 record (as `validation_method` is set to `DNS` in the aws_acm_certificate resource)
+#resource "aws_route53_record" "wildcard_validation" {
+#  for_each = {
+#    for dvo in aws_acm_certificate.wildcard_website.domain_validation_options : dvo.domain_name => {
+#      name   = dvo.resource_record_name
+#      record = dvo.resource_record_value
+#      type   = dvo.resource_record_type
+#    }
+#  }
+#  name            = each.value.name
+#  type            = each.value.type
+#  #zone_id         = data.aws_route53_zone.main.zone_id
+#  zone_id = "${aws_route53_zone.main.zone_id}"
+#  records         = [each.value.record]
+#  allow_overwrite = true
+#  ttl             = "60"
+#}
+  
+# another workaround. This only works in cases where there is only one validation option. 
+# with a known fixed number (add a count and replace [0] by [count.index]).
 resource "aws_route53_record" "wildcard_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.wildcard_website.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      record = dvo.resource_record_value
-      type   = dvo.resource_record_type
-    }
-  }
-  name            = each.value.name
-  type            = each.value.type
-  #zone_id         = data.aws_route53_zone.main.zone_id
-  zone_id = "${aws_route53_zone.main.zone_id}"
-  records         = [each.value.record]
+  name            = aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_name[0]
+  records         = [aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_value[0]]
+  type            = aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_type[0]
+  zone_id         = aws_route53_zone.wildcard_website.zone_id
+  #zone_id = "${aws_route53_zone.main.zone_id}"
   allow_overwrite = true
-  ttl             = "60"
-}
+  ttl             = 60
+}  
+  
+  
 
 # Triggers the ACM wildcard certificate validation event
 resource "aws_acm_certificate_validation" "wildcard_cert" {
