@@ -2,6 +2,7 @@
 
 # We set AWS as the cloud platform to use
 provider "aws" {
+   alias  = "us-east-1"
    region  = var.aws_region
    access_key = var.access_key
    secret_key = var.secret_key
@@ -146,6 +147,21 @@ resource "aws_s3_bucket" "website_redirect" {
   }
 }
 
+
+
+// we upload our html files to s3 bucket
+resource "aws_s3_bucket_object" "file_upload1" {
+  bucket = "${var.website-domain-main}-root"
+  key    = "my-www-resbbi-com-s3-bucket-key1"
+  source = "index.html"
+} 
+resource "aws_s3_bucket_object" "file_upload2" {
+  bucket = "${var.website-domain-main}-redirect"
+  key    = "my-www-resbbi-com-s3-bucket-key2"
+  source = "index.html"
+}   
+   
+   
 ## CloudFront
 # Creates the CloudFront distribution to serve the static website
 resource "aws_cloudfront_distribution" "website_cdn_root" {
