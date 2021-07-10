@@ -7,6 +7,8 @@
 ##    Do not push files to the S3 bucket with an ACL giving public READ access, e.g s3-sync --acl-public
 ## Before we run terraform apply, we must: 
 ## - Setup an email redirect with our domain registrar to redirect “admin@your-domain” to an email inbox that we can receive email at.
+## After we run terraform apply, we must:
+## - Configure on our domain registrar settings, the AWS Route53 nameservers received 
 ##
 ## 2016-05-16
 ##    AWS Certificate Manager supports multiple regions. To use CloudFront with ACM certificates, the
@@ -33,13 +35,13 @@ provider "aws" {
 
 
 
-## Route 53
-# Provides details about the zone
+## AWS Route53 is a DNS service used to perform three main functions: domain registration, DNS routing, and health checking.
+# The first step to configure the DNS service for our domain is to create the public hosted zone
+# the name server (NS) record, and the start of a zone of authority (SOA) record are automatically created by AWS
 resource  "aws_route53_zone" "main" {
-  # provider = aws.us-east-1  # the alias of the provider
   name         = var.website-domain-main
-  #private_zone = false
 }
+
 
 # We use ACM (AWS Certificate Manager) to create the wildcard certificate *.<yourdomain.com>
 # This resource won't be created until we receive the email verifying we own the domain and we click on the confirmation link.
@@ -201,8 +203,9 @@ resource "aws_s3_bucket_object" "file_upload2" {
 # Creates the CloudFront distribution to serve the static website
 resource "aws_cloudfront_distribution" "website_cdn_root" {
   enabled     = true
+  # (Optional) - The price class for this distribution. One of PriceClass_All, PriceClass_200, PriceClass_100 
   price_class = "PriceClass_All"
-  # Select the correct PriceClass depending on who the CDN is supposed to serve (https://docs.aws.amazon.com/AmazonCloudFront/ladev/DeveloperGuide/PriceClass.html)
+  # (Optional) - Extra CNAMEs (alternate domain names), if any, for this distribution 
   aliases = [var.website-domain-main]
 
   # Origin is where CloudFront gets its content from 
@@ -211,8 +214,10 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
     domain_name = aws_s3_bucket.website_root.website_endpoint
 
     custom_origin_config {
+      # The protocol policy that you want CloudFront to use when fetching objects from the origin server (a.k.a S3 in our situation). 
+      # HTTP Only is the default setting when the origin is an Amazon S3 static website hosting endpoint
+      # This is because Amazon S3 doesn’t support HTTPS connections for static website hosting endpoints. 
       origin_protocol_policy = "http-only"
-      # The protocol policy that you want CloudFront to use when fetching objects from the origin server (a.k.a S3 in our situation). HTTP Only is the default setting when the origin is an Amazon S3 static website hosting endpoint, because Amazon S3 doesn’t support HTTPS connections for static website hosting endpoints.
       http_port            = 80
       https_port           = 443
       origin_ssl_protocols = ["TLSv1.2", "TLSv1.1", "TLSv1"]
@@ -277,16 +282,17 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   }
 }
 
+
 # Creates the DNS record to point on the main CloudFront distribution ID
 resource "aws_route53_record" "website_cdn_root_record" {
-  #zone_id = data.aws_route53_zone.main.zone_id
+  #zone_id = data.aws_route53_zone.wildcard_website.zone_id
   zone_id = "${aws_route53_zone.main.zone_id}"
   name    = var.website-domain-main
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.website_cdn_root.domain_name
-    zone_id                = aws_cloudfront_distribution.website_cdn_root.hosted_zone_id
+    name = aws_cloudfront_distribution.website_cdn_root.domain_name
+    zone_id = aws_cloudfront_distribution.website_cdn_root.hosted_zone_id
     evaluate_target_health = false
   }
 }
