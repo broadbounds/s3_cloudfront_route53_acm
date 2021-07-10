@@ -52,72 +52,54 @@ resource "aws_acm_certificate" "wildcard_website" {
   # We also want the cert to be valid for the root domain even though we'll be redirecting to the www. domain immediately.
   # subject_alternative_names = ["${var.website-domain-main}"]
   subject_alternative_names = ["*.${var.website-domain-main}"]
+  # Which method to use for validation. DNS or EMAIL are valid, NONE can be used for certificates that were imported into ACM and then into Terraform. 
   validation_method         = "EMAIL"
 
+  # (Optional) A mapping of tags to assign to the resource. 
   tags = merge(var.tags, {
     ManagedBy = "terraform"
     Changed   = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
   })
 
+  # The lifecycle block is available for all resource blocks regardless of type
+  # create_before_destroy(bool), prevent_destroy(bool), and ignore_changes(list of attribute names)
+  # to be used when a resource is created with references to data that may change in the future, but should not affect said resource after its creation 
   lifecycle {
     ignore_changes = [tags["Changed"]]
   }
 
 }
 
-# Validates the ACM wildcard by creating a Route53 record (as `validation_method` is set to `DNS` in the aws_acm_certificate resource)
-#resource "aws_route53_record" "wildcard_validation" {
-#  for_each = {
-#    for dvo in aws_acm_certificate.wildcard_website.domain_validation_options : dvo.domain_name => {
-#      name   = dvo.resource_record_name
-#      record = dvo.resource_record_value
-#      type   = dvo.resource_record_type
-#    }
-#  }
-#  name            = each.value.name
-#  type            = each.value.type
-#  #zone_id         = data.aws_route53_zone.main.zone_id
-#  zone_id = "${aws_route53_zone.main.zone_id}"
-#  records         = [each.value.record]
-#  allow_overwrite = true
-#  ttl             = "60"
-#}
-  
-# another workaround. This only works in cases where there is only one validation option. 
-# with a known fixed number (add a count and replace [0] by [count.index]).
-#resource "aws_route53_record" "wildcard_validation" {
-#  name            = aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_name[0]
-#  records         = [aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_value[0]]
-#  type            = aws_acm_certificate.wildcard_website.domain_validation_options.*.resource_record_type[0]
-#  #zone_id         = aws_route53_zone.wildcard_website.zone_id
-#  zone_id = "${aws_route53_zone.main.zone_id}"
-#  allow_overwrite = true
-#  ttl             = 60
-#}  
-  
 
-  
-
-# Triggers the ACM wildcard certificate validation event
+# This resource is simply a waiter for manual email approval of ACM certificates.
+# We use the aws_acm_certificate_validation resource to wait for the newly created certificate to become valid
+# and then use its outputs to associate the certificate Amazon Resource Name (ARN) with the CloudFront distribution
+# The certificate Amazon Resource Name (ARN) provided by aws_acm_certificate looks identical, but is almost always going to be invalid right away. 
+# Using the output from the validation resource ensures that Terraform will wait for ACM to validate the certificate before resolving its ARN.
 resource "aws_acm_certificate_validation" "wildcard_cert" {
   provider                = aws.us-east-1
   certificate_arn         = aws_acm_certificate.wildcard_website.arn
-  # validation_record_fqdns = [for k, v in aws_route53_record.wildcard_validation : v.fqdn] #not available coz using email validation
 }
 
 
-# Get the ARN of the issued certificate
+# Find a certificate that is issued
+# Get the ARN of the issued certificate in AWS Certificate Manager (ACM)
 data "aws_acm_certificate" "wildcard_website" {
   provider = aws.us-east-1
 
+  # This argument is available for all resource blocks, regardless of resource type
+  # Necessary when a resource or module relies on some other resource's behavior but doesn't access any of that resource's data in its arguments
   depends_on = [
     aws_acm_certificate.wildcard_website,
-    #aws_route53_record.wildcard_validation,
     aws_acm_certificate_validation.wildcard_cert,
   ]
 
+  # (Required) The domain of the certificate to look up 
   domain      = var.website-domain-main
+  # (Optional) A list of statuses on which to filter the returned list. Default is ISSUED if no value is specified
+  # Valid values are PENDING_VALIDATION, ISSUED, INACTIVE, EXPIRED, VALIDATION_TIMED_OUT, REVOKED and FAILED 
   statuses    = ["ISSUED"]
+  # Returning only the most recent one 
   most_recent = true
 }
 
@@ -144,7 +126,10 @@ resource "aws_s3_bucket" "website_logs" {
 # Creates bucket to store the static website
 resource "aws_s3_bucket" "website_root" {
   bucket = "${var.website-domain-main}-root"
+  # Because we want our site to be available on the internet, we set this so anyone can read this bucket 
   acl    = "public-read"
+   
+  #policy = file("policy.json") 
 
   # Comment the following line if you are uncomfortable with Terraform destroying the bucket even if not empty
   force_destroy = true
@@ -154,8 +139,11 @@ resource "aws_s3_bucket" "website_root" {
     target_prefix = "${var.website-domain-main}/"
   }
 
+  # For S3 to understand what it means to host a static website
   website {
+    # (Required, unless using redirect_all_requests_to) Here we tell S3 what to use when a request comes in to the root ex. https://www.domain.com
     index_document = "index.html"
+    # (Optional) The page to serve up if a request results in an error or a non-existing page
     error_document = "404.html"
   }
 
@@ -217,6 +205,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   # Select the correct PriceClass depending on who the CDN is supposed to serve (https://docs.aws.amazon.com/AmazonCloudFront/ladev/DeveloperGuide/PriceClass.html)
   aliases = [var.website-domain-main]
 
+  # Origin is where CloudFront gets its content from 
   origin {
     origin_id   = "origin-bucket-${aws_s3_bucket.website_root.id}"
     domain_name = aws_s3_bucket.website_root.website_endpoint
