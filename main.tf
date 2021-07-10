@@ -1,6 +1,29 @@
-# Tuto at https://github.com/cloudmaniac/terraform-aws-static-website
+################################################################################################################
+## Creates a setup to serve a static website from an AWS S3 bucket, with a Cloudfront CDN and
+## certificates from AWS Certificate Manager.
+## 
+## Tuto at https://github.com/cloudmaniac/terraform-aws-static-website
+## Deploy remark:
+##    Do not push files to the S3 bucket with an ACL giving public READ access, e.g s3-sync --acl-public
+## Before we run terraform apply, we must: 
+## - Setup an email redirect with our domain registrar to redirect “admin@your-domain” to an email inbox that we can receive email at.
+##
+## 2016-05-16
+##    AWS Certificate Manager supports multiple regions. To use CloudFront with ACM certificates, the
+##    certificates must be requested in region us-east-1
+################################################################################################################
 
-# We set AWS as the cloud platform to use
+# We set AWS as our default cloud provider
+# By default, resources use a default provider configuration (one without an alias argument)
+provider "aws" {
+   region  = var.aws_region
+   access_key = var.access_key
+   secret_key = var.secret_key
+ }
+
+# We can set up multiple providers and use them for creating resources in different regions or in different AWS accounts by creating aliases.
+# Some AWS services require the us-east-1 (N. Virginia) region to be configured:
+# To use an ACM certificate with CloudFront, we must request or import the certificate in the US East (N. Virginia) region.
 provider "aws" {
   alias  = "us-east-1"
   region = "us-east-1"
@@ -8,11 +31,7 @@ provider "aws" {
   secret_key = var.secret_key 
 }
 
-provider "aws" {
-   region  = var.aws_region
-   access_key = var.access_key
-   secret_key = var.secret_key
- }
+
 
 ## Route 53
 # Provides details about the zone
@@ -22,11 +41,16 @@ resource  "aws_route53_zone" "main" {
   #private_zone = false
 }
 
-## ACM (AWS Certificate Manager)
-# Creates the wildcard certificate *.<yourdomain.com>
+# We use ACM (AWS Certificate Manager) to create the wildcard certificate *.<yourdomain.com>
+# This resource won't be created until we receive the email verifying we own the domain and we click on the confirmation link.
 resource "aws_acm_certificate" "wildcard_website" {
+  # We refer to the aliased provider ( ${provider_name}.${alias} ) for creating our ACM resource. 
   provider                  = aws.us-east-1
+  # We want a wildcard cert so we can host subdomains later.
+  # domain_name       = "*.${var.website-domain-main}" will enable this instead
   domain_name               = var.website-domain-main
+  # We also want the cert to be valid for the root domain even though we'll be redirecting to the www. domain immediately.
+  # subject_alternative_names = ["${var.website-domain-main}"]
   subject_alternative_names = ["*.${var.website-domain-main}"]
   validation_method         = "EMAIL"
 
