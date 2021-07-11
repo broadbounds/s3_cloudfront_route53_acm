@@ -13,16 +13,16 @@ variable "secret_key" {
   default     = ""
 }
 
-variable "website-domain-main" {
-  description = "Main website domain, e.g. cloudmaniac.net"
-  type        = string
-  default     = "resbbi.com"
-}
-
-variable "website-domain-redirect" {
-  description = "Secondary FQDN that will redirect to the main URL, e.g. www.cloudmaniac.net"
+variable "www-website-domain" {
+  description = "Main website domain"
   type        = string
   default     = "www.resbbi.com"
+}
+
+variable "website-domain" {
+  description = "Secondary website domain that will redirect to the main URL"
+  type        = string
+  default     = "resbbi.com"
 }
 
 
