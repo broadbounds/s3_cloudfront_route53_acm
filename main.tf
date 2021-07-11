@@ -10,9 +10,7 @@
 ## After we run terraform apply, we must:
 ## - Configure on our domain registrar settings, the AWS Route53 nameservers received 
 ##
-## 2016-05-16
-##    AWS Certificate Manager supports multiple regions. To use CloudFront with ACM certificates, the
-##    certificates must be requested in region us-east-1
+## To use CloudFront with ACM certificates, the certificates must be requested in region us-east-1
 ################################################################################################################
 
 # We set AWS as our default cloud provider
@@ -84,26 +82,26 @@ resource "aws_acm_certificate_validation" "wildcard_cert" {
 }
 
 
-# Find a certificate that is issued
-# Get the ARN of the issued certificate in AWS Certificate Manager (ACM)
-data "aws_acm_certificate" "wildcard_website" {
-  provider = aws.us-east-1
+## Find a certificate that is issued
+## Get the ARN of the issued certificate in AWS Certificate Manager (ACM)
+#data "aws_acm_certificate" "wildcard_website" {
+#  provider = aws.us-east-1
 
-  # This argument is available for all resource blocks, regardless of resource type
-  # Necessary when a resource or module relies on some other resource's behavior but doesn't access any of that resource's data in its arguments
-  depends_on = [
-    aws_acm_certificate.wildcard_website,
-    aws_acm_certificate_validation.wildcard_cert,
-  ]
+ # # This argument is available for all resource blocks, regardless of resource type
+ # # Necessary when a resource or module relies on some other resource's behavior but doesn't access any of that resource's data in its arguments
+ # depends_on = [
+ #   aws_acm_certificate.wildcard_website,
+ #   aws_acm_certificate_validation.wildcard_cert,
+ # ]
 
-  # (Required) The domain of the certificate to look up 
-  domain      = var.website-domain-main
-  # (Optional) A list of statuses on which to filter the returned list. Default is ISSUED if no value is specified
-  # Valid values are PENDING_VALIDATION, ISSUED, INACTIVE, EXPIRED, VALIDATION_TIMED_OUT, REVOKED and FAILED 
-  statuses    = ["ISSUED"]
-  # Returning only the most recent one 
-  most_recent = true
-}
+ # # (Required) The domain of the certificate to look up 
+ # domain      = var.website-domain-main
+ # # (Optional) A list of statuses on which to filter the returned list. Default is ISSUED if no value is specified
+ # # Valid values are PENDING_VALIDATION, ISSUED, INACTIVE, EXPIRED, VALIDATION_TIMED_OUT, REVOKED and FAILED 
+ # statuses    = ["ISSUED"]
+ # # Returning only the most recent one 
+ # most_recent = true
+#}
 
 ## S3
 # Creates bucket to store logs
@@ -159,30 +157,6 @@ resource "aws_s3_bucket" "website_root" {
   }
 }
 
-# Creates bucket for the website handling the redirection (if required), e.g. from https://www.example.com to https://example.com
-resource "aws_s3_bucket" "website_redirect" {
-  bucket        = "${var.website-domain-main}-redirect"
-  acl           = "public-read"
-  force_destroy = true
-
-  logging {
-    target_bucket = aws_s3_bucket.website_logs.bucket
-    target_prefix = "${var.website-domain-main}-redirect/"
-  }
-
-  website {
-    redirect_all_requests_to = "https://${var.website-domain-main}"
-  }
-
-  tags = merge(var.tags, {
-    ManagedBy = "terraform"
-    Changed   = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
-  })
-
-  lifecycle {
-    ignore_changes = [tags["Changed"]]
-  }
-}
 
 
 
@@ -298,31 +272,14 @@ resource "aws_route53_record" "website_cdn_root_record" {
 }
 
 
-# Creates policy to allow public access to the S3 bucket
-resource "aws_s3_bucket_policy" "update_website_root_bucket_policy" {
-  bucket = aws_s3_bucket.website_root.id
 
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Id": "PolicyForWebsiteEndpointsPublicContent",
-  "Statement": [
-    {
-      "Sid": "PublicRead",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": [
-        "s3:GetObject"
-      ],
-      "Resource": [
-        "${aws_s3_bucket.website_root.arn}/*",
-        "${aws_s3_bucket.website_root.arn}"
-      ]
-    }
-  ]
-}
-POLICY
-}
+
+
+################################################################################################################
+## we need to create a whole new S3 bucket, CloudFront distribution and Route53 record just to redirect https://ourdomain to https://www.ourdomain
+## That’s because although S3 can serve up a redirect to the www version of your site, it can’t host SSL certs and so you need CloudFront. 
+################################################################################################################
+
 
 # Creates the CloudFront distribution to serve the redirection website (if redirection is required)
 resource "aws_cloudfront_distribution" "website_cdn_redirect" {
@@ -395,12 +352,56 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
 resource "aws_route53_record" "website_cdn_redirect_record" {
   #zone_id = data.aws_route53_zone.main.zone_id
   zone_id = "${aws_route53_zone.main.zone_id}"
-  name    = var.website-domain-redirect
+  # NOTE: name is blank here.
+  name = "" 
+  #name    = var.website-domain-redirect
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.website_cdn_redirect.domain_name
-    zone_id                = aws_cloudfront_distribution.website_cdn_redirect.hosted_zone_id
+    name = aws_cloudfront_distribution.website_cdn_redirect.domain_name
+    zone_id = aws_cloudfront_distribution.website_cdn_redirect.hosted_zone_id
     evaluate_target_health = false
   }
 }
+
+
+# Creates bucket for the website handling the redirection (if required), e.g. from https://example.com to https://www.example.com 
+resource "aws_s3_bucket" "website_redirect" {
+  bucket        = "${var.website-domain-main}-redirect"
+  acl           = "public-read"
+  force_destroy = true
+  policy = <<POLICY
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Sid":"AddPerm",
+      "Effect":"Allow",
+      "Principal": "*",
+      "Action":["s3:GetObject"],
+      "Resource":["arn:aws:s3:::${var.website-domain-main}-redirect/*"]
+    }
+  ]
+}
+POLICY 
+
+  logging {
+    target_bucket = aws_s3_bucket.website_logs.bucket
+    target_prefix = "${var.website-domain-main}-redirect/"
+  }
+
+  website {
+    # Note this redirect. Here's where the magic happens. 
+    redirect_all_requests_to = "https://${var.website-domain-main}"
+  }
+
+  tags = merge(var.tags, {
+    ManagedBy = "terraform"
+    Changed   = formatdate("YYYY-MM-DD hh:mm ZZZ", timestamp())
+  })
+
+  lifecycle {
+    ignore_changes = [tags["Changed"]]
+  }
+}
+
