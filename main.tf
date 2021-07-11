@@ -37,7 +37,7 @@ provider "aws" {
 # The first step to configure the DNS service for our domain is to create the public hosted zone
 # the name server (NS) record, and the start of a zone of authority (SOA) record are automatically created by AWS
 resource  "aws_route53_zone" "main" {
-  name         = var.website-domain-main
+  name         = var.www-website-domain
 }
 
 
@@ -48,10 +48,9 @@ resource "aws_acm_certificate" "wildcard_website" {
   provider                  = aws.us-east-1
   # We want a wildcard cert so we can host subdomains later.
   # domain_name       = "*.${var.website-domain-main}" will enable this instead
-  domain_name               = var.website-domain-main
+  domain_name               = var.www-website-domain
   # We also want the cert to be valid for the root domain even though we'll be redirecting to the www. domain immediately.
-  # subject_alternative_names = ["${var.website-domain-main}"]
-  subject_alternative_names = ["*.${var.website-domain-main}"]
+  subject_alternative_names = ["${var.website-domain}"]
   # Which method to use for validation. DNS or EMAIL are valid, NONE can be used for certificates that were imported into ACM and then into Terraform. 
   validation_method         = "EMAIL"
 
@@ -106,7 +105,7 @@ resource "aws_acm_certificate_validation" "wildcard_cert" {
 ## S3
 # Creates bucket to store logs
 resource "aws_s3_bucket" "website_logs" {
-  bucket = "${var.website-domain-main}-logs"
+  bucket = "${var.www-website-domain}-logs"
   acl    = "log-delivery-write"
 
   # Comment the following line if you are uncomfortable with Terraform destroying the bucket even if this one is not empty
@@ -125,7 +124,7 @@ resource "aws_s3_bucket" "website_logs" {
 
 # Creates bucket to store the static website
 resource "aws_s3_bucket" "website_root" {
-  bucket = "${var.website-domain-main}-root"
+  bucket = "${var.www-website-domain}-root"
   # Because we want our site to be available on the internet, we set this so anyone can read this bucket 
   acl    = "public-read"
    
@@ -136,7 +135,7 @@ resource "aws_s3_bucket" "website_root" {
 
   logging {
     target_bucket = aws_s3_bucket.website_logs.bucket
-    target_prefix = "${var.website-domain-main}/"
+    target_prefix = "${var.www-website-domain}/"
   }
 
   # For S3 to understand what it means to host a static website
@@ -163,12 +162,12 @@ resource "aws_s3_bucket" "website_root" {
 // we upload our html files to s3 bucket
 resource "aws_s3_bucket_object" "file_upload1" {
   bucket = "${aws_s3_bucket.website_root.bucket}"
-  key    = "my-www-resbbi-com-s3-bucket-key1"
+  key    = "my-www-website-domain-bucket-key"
   source = "index.html"
 } 
 resource "aws_s3_bucket_object" "file_upload2" {
   bucket = "${aws_s3_bucket.website_redirect.bucket}"
-  key    = "my-www-resbbi-com-s3-bucket-key2"
+  key    = "my-website-domain-bucket-key"
   source = "index.html"
 }   
    
@@ -180,7 +179,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   # (Optional) - The price class for this distribution. One of PriceClass_All, PriceClass_200, PriceClass_100 
   price_class = "PriceClass_All"
   # (Optional) - Extra CNAMEs (alternate domain names), if any, for this distribution 
-  aliases = [var.website-domain-main]
+  aliases = [var.www-website-domain]
 
   # Origin is where CloudFront gets its content from 
   origin {
@@ -202,7 +201,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
 
   logging_config {
     bucket = aws_s3_bucket.website_logs.bucket_domain_name
-    prefix = "${var.website-domain-main}/"
+    prefix = "${var.www-website-domain}/"
   }
 
   default_cache_behavior {
@@ -261,7 +260,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
 resource "aws_route53_record" "website_cdn_root_record" {
   #zone_id = data.aws_route53_zone.wildcard_website.zone_id
   zone_id = "${aws_route53_zone.main.zone_id}"
-  name    = var.website-domain-main
+  name    = var.www-website-domain
   type    = "A"
 
   alias {
@@ -286,7 +285,7 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
   enabled     = true
   price_class = "PriceClass_All"
   # Select the correct PriceClass depending on who the CDN is supposed to serve (https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PriceClass.html)
-  aliases = [var.website-domain-redirect]
+  aliases = [var.website-domain]
 
   origin {
     origin_id   = "origin-bucket-${aws_s3_bucket.website_redirect.id}"
@@ -354,7 +353,7 @@ resource "aws_route53_record" "website_cdn_redirect_record" {
   zone_id = "${aws_route53_zone.main.zone_id}"
   # NOTE: name is blank here.
   name = "" 
-  #name    = var.website-domain-redirect
+  #name    = var.website-domain
   type    = "A"
 
   alias {
@@ -379,7 +378,7 @@ resource "aws_s3_bucket" "website_redirect" {
       "Effect":"Allow",
       "Principal": "*",
       "Action":["s3:GetObject"],
-      "Resource":["arn:aws:s3:::${var.website-domain-main}-redirect/*"]
+      "Resource":["arn:aws:s3:::${var.www-website-domain}-redirect/*"]
     }
   ]
 }
@@ -387,12 +386,12 @@ POLICY
 
   logging {
     target_bucket = aws_s3_bucket.website_logs.bucket
-    target_prefix = "${var.website-domain-main}-redirect/"
+    target_prefix = "${var.www-website-domain}-redirect/"
   }
 
   website {
     # Note this redirect. Here's where the magic happens. 
-    redirect_all_requests_to = "https://${var.website-domain-main}"
+    redirect_all_requests_to = "https://${var.www-website-domain}"
   }
 
   tags = merge(var.tags, {
