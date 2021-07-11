@@ -47,8 +47,7 @@ resource "aws_acm_certificate" "wildcard_website" {
   # We refer to the aliased provider ( ${provider_name}.${alias} ) for creating our ACM resource. 
   provider                  = aws.us-east-1
   # We want a wildcard cert so we can host subdomains later.
-  # domain_name       = "*.${var.website-domain-main}" will enable this instead
-  domain_name               = var.www-website-domain
+  domain_name       = "*.${var.website-domain}" 
   # We also want the cert to be valid for the root domain even though we'll be redirecting to the www. domain immediately.
   subject_alternative_names = ["${var.website-domain}"]
   # Which method to use for validation. DNS or EMAIL are valid, NONE can be used for certificates that were imported into ACM and then into Terraform. 
@@ -124,11 +123,25 @@ resource "aws_s3_bucket" "website_logs" {
 
 # Creates bucket to store the static website
 resource "aws_s3_bucket" "website_root" {
-  bucket = "${var.www-website-domain}-root"
+  bucket = "${var.www-website-domain}"
   # Because we want our site to be available on the internet, we set this so anyone can read this bucket 
   acl    = "public-read"
    
   #policy = file("policy.json") 
+  policy = <<POLICY
+{
+  "Version":"2012-10-17",
+  "Statement":[
+    {
+      "Sid":"AddPerm",
+      "Effect":"Allow",
+      "Principal": "*",
+      "Action":["s3:GetObject"],
+      "Resource":["arn:aws:s3:::${var.www-website-domain}/*"]
+    }
+  ]
+}
+POLICY 
 
   # Comment the following line if you are uncomfortable with Terraform destroying the bucket even if not empty
   force_destroy = true
@@ -207,12 +220,14 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   default_cache_behavior {
     allowed_methods  = ["GET", "HEAD", "OPTIONS"]
     cached_methods   = ["GET", "HEAD", "OPTIONS"]
+    # This needs to match the `origin_id` above 
     target_origin_id = "origin-bucket-${aws_s3_bucket.website_root.id}"
     min_ttl          = "0"
     default_ttl      = "300"
     max_ttl          = "1200"
 
-    viewer_protocol_policy = "redirect-to-https" # Redirects any HTTP request to HTTPS
+    # Redirects any HTTP request to HTTPS 
+    viewer_protocol_policy = "redirect-to-https" 
     compress               = true
 
     forwarded_values {
@@ -284,7 +299,7 @@ resource "aws_route53_record" "website_cdn_root_record" {
 resource "aws_cloudfront_distribution" "website_cdn_redirect" {
   enabled     = true
   price_class = "PriceClass_All"
-  # Select the correct PriceClass depending on who the CDN is supposed to serve (https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PriceClass.html)
+
   aliases = [var.website-domain]
 
   origin {
@@ -366,7 +381,7 @@ resource "aws_route53_record" "website_cdn_redirect_record" {
 
 # Creates bucket for the website handling the redirection (if required), e.g. from https://example.com to https://www.example.com 
 resource "aws_s3_bucket" "website_redirect" {
-  bucket        = "${var.website-domain-main}-redirect"
+  bucket        = "${var.website-domain}"
   acl           = "public-read"
   force_destroy = true
   policy = <<POLICY
@@ -378,7 +393,7 @@ resource "aws_s3_bucket" "website_redirect" {
       "Effect":"Allow",
       "Principal": "*",
       "Action":["s3:GetObject"],
-      "Resource":["arn:aws:s3:::${var.www-website-domain}-redirect/*"]
+      "Resource":["arn:aws:s3:::${var.website-domain}/*"]
     }
   ]
 }
