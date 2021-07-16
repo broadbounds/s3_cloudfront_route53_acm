@@ -82,24 +82,24 @@ resource "aws_acm_certificate_validation" "wildcard_cert" {
 
 ## Find a certificate that is issued
 ## Get the ARN of the issued certificate in AWS Certificate Manager (ACM)
-#data "aws_acm_certificate" "wildcard_website" {
-#  provider = aws.us-east-1
+data "aws_acm_certificate" "wildcard_website" {
+  provider = aws.us-east-1
 
- # # This argument is available for all resource blocks, regardless of resource type
- # # Necessary when a resource or module relies on some other resource's behavior but doesn't access any of that resource's data in its arguments
- # depends_on = [
- #   aws_acm_certificate.wildcard_website,
- #   aws_acm_certificate_validation.wildcard_cert,
- # ]
+  # This argument is available for all resource blocks, regardless of resource type
+  # Necessary when a resource or module relies on some other resource's behavior but doesn't access any of that resource's data in its arguments
+  depends_on = [
+    aws_acm_certificate.wildcard_website,
+    aws_acm_certificate_validation.wildcard_cert,
+  ]
 
- # # (Required) The domain of the certificate to look up 
- # domain      = var.website-domain-main
- # # (Optional) A list of statuses on which to filter the returned list. Default is ISSUED if no value is specified
- # # Valid values are PENDING_VALIDATION, ISSUED, INACTIVE, EXPIRED, VALIDATION_TIMED_OUT, REVOKED and FAILED 
- # statuses    = ["ISSUED"]
- # # Returning only the most recent one 
- # most_recent = true
-#}
+  # (Required) The domain of the certificate to look up 
+  domain      = var.www-website-domain 
+  # (Optional) A list of statuses on which to filter the returned list. Default is ISSUED if no value is specified
+  # Valid values are PENDING_VALIDATION, ISSUED, INACTIVE, EXPIRED, VALIDATION_TIMED_OUT, REVOKED and FAILED 
+  statuses    = ["ISSUED"]
+  # Returning only the most recent one 
+  most_recent = true
+}
 
 ## S3
 # Creates bucket to store logs
@@ -258,7 +258,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = aws_acm_certificate.wildcard_website.arn #data.aws_acm_certificate.wildcard_website.arn
+    acm_certificate_arn = data.aws_acm_certificate.wildcard_website.arn
     ssl_support_method  = "sni-only"
   }
 
@@ -357,7 +357,7 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = aws_acm_certificate.wildcard_website.arn #data.aws_acm_certificate.wildcard_website.arn
+    acm_certificate_arn = data.aws_acm_certificate.wildcard_website.arn
     ssl_support_method  = "sni-only"
   }
 
