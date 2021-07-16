@@ -258,7 +258,7 @@ resource "aws_cloudfront_distribution" "website_cdn_root" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = data.aws_acm_certificate.wildcard_website.arn
+    acm_certificate_arn = aws_acm_certificate.wildcard_website.arn #data.aws_acm_certificate.wildcard_website.arn
     ssl_support_method  = "sni-only"
   }
 
@@ -357,7 +357,7 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
   }
 
   viewer_certificate {
-    acm_certificate_arn = data.aws_acm_certificate.wildcard_website.arn
+    acm_certificate_arn = aws_acm_certificate.wildcard_website.arn #data.aws_acm_certificate.wildcard_website.arn
     ssl_support_method  = "sni-only"
   }
 
