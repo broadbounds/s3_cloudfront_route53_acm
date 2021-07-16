@@ -185,12 +185,12 @@ resource "aws_s3_bucket_object" "file_upload2" {
 }   
 
 // we upload our html files to s3 bucket
-resource "aws_s3_bucket_object" "file_upload1" {
+resource "aws_s3_bucket_object" "file_upload11" {
   bucket = "${aws_s3_bucket.website_root.bucket}"
   key    = "my-www-website-domain-bucket-key"
   source = "404.html"
 } 
-resource "aws_s3_bucket_object" "file_upload2" {
+resource "aws_s3_bucket_object" "file_upload12" {
   bucket = "${aws_s3_bucket.website_redirect.bucket}"
   key    = "my-website-domain-bucket-key"
   source = "404.html"
