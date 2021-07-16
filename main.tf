@@ -2,6 +2,7 @@
 ## Creates a setup to serve a static website from an AWS S3 bucket, with a Cloudfront CDN and
 ## certificates from AWS Certificate Manager.
 ## 
+## Tuto at https://medium.com/runatlantis/hosting-our-static-site-over-ssl-with-s3-acm-cloudfront-and-terraform-513b799aec0f
 ## Tuto at https://github.com/cloudmaniac/terraform-aws-static-website
 ## Deploy remark:
 ##    Do not push files to the S3 bucket with an ACL giving public READ access, e.g s3-sync --acl-public
