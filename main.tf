@@ -379,8 +379,8 @@ resource "aws_route53_record" "website_cdn_redirect_record" {
   #zone_id = data.aws_route53_zone.main.zone_id
   zone_id = "${aws_route53_zone.main.zone_id}"
   # NOTE: name is blank here.
-  name = "" 
-  #name    = var.website-domain
+  #name = "" 
+  name    = var.website-domain
   type    = "A"
 
   alias {
@@ -388,6 +388,8 @@ resource "aws_route53_record" "website_cdn_redirect_record" {
     zone_id = aws_cloudfront_distribution.website_cdn_redirect.hosted_zone_id
     evaluate_target_health = false
   }
+   
+
 }
 
 
