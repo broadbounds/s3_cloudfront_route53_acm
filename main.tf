@@ -328,7 +328,7 @@ resource "aws_cloudfront_distribution" "website_cdn_redirect" {
 
   logging_config {
     bucket = aws_s3_bucket.website_logs.bucket_domain_name
-    prefix = "${var.website-domain-redirect}/"
+    prefix = "${var.www-website-domain}/"
   }
 
   default_cache_behavior {
