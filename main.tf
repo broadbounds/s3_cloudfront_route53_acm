@@ -35,10 +35,10 @@ provider "aws" {
 
 
 ## AWS Route53 is a DNS service used to perform three main functions: domain registration, DNS routing, and health checking.
-# The first step to configure the DNS service for our domain is to create the public hosted zone
+# The first step to configure the DNS service for our domain (eg: example.com) is to create the public hosted zone 
 # the name server (NS) record, and the start of a zone of authority (SOA) record are automatically created by AWS
 resource  "aws_route53_zone" "main" {
-  name         = var.www-website-domain
+  name         = var.website-domain
 }
 
 
