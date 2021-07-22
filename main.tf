@@ -174,6 +174,8 @@ POLICY
 
 
 // we upload our html files to s3 bucket
+// my uploads are not working because the source to upload cannot be remote like an url or github
+// the source to upload must be a path on the local machine
 resource "aws_s3_bucket_object" "file_upload1" {
   bucket = "${aws_s3_bucket.website_root.bucket}"
   key    = "my-www-website-domain-bucket-key"
